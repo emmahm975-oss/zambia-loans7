@@ -118,15 +118,34 @@
             .card h2 { font-size: 18px; }
         }
 
-        /* Mobile Responsive Chat Panel */
+        /* NEW: Chat CSS to stop overlap */
+        #chat-panel {
+            display: none; 
+            position: fixed; 
+            bottom: 20px; 
+            right: 20px; 
+            width: 330px; 
+            height: 400px; 
+            background: #fff; 
+            border-radius: 12px; 
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3); 
+            flex-direction: column; 
+            z-index: 99999; 
+            font-family: sans-serif; 
+            overflow: hidden; 
+            border: 1px solid #ddd;
+        }
+
+        /* Mobile specific fix */
         @media (max-width: 600px) {
             #chat-panel {
-                width: calc(100% - 20px) !important;
-                left: 10px !important;
-                right: 10px !important;
-                bottom: 10px !important;
-                height: 75vh !important; 
-                max-height: none !important;
+                top: 80px; /* Anchors to top of screen below navbar */
+                bottom: auto; /* Stops it from moving with keyboard */
+                left: 10px;
+                right: 10px;
+                width: auto;
+                height: calc(100vh - 100px); /* Leaves space at bottom */
+                max-height: 450px;
             }
         }
     </style>
@@ -190,7 +209,7 @@
     </main>
 
     <!-- Chat Panel -->
-    <div id="chat-panel" style="display:none; position:fixed; bottom:20px; right:20px; width:330px; height:450px; background:#fff; border-radius:12px; box-shadow:0 10px 40px rgba(0,0,0,0.3); flex-direction:column; z-index:99999; font-family:sans-serif; overflow:hidden; border: 1px solid #ddd;">
+    <div id="chat-panel">
         
         <div style="background:#1a73e8; color:white; padding:14px; font-weight:600; display:flex; justify-content:space-between; align-items:center;">
             <span>Live Support</span>
@@ -201,7 +220,7 @@
         <div id="chat-messages" style="flex:1; padding:12px; overflow-y:auto; background:#f5f7fb; font-size:14px; display:flex; flex-direction:column;"></div>
         
         <div style="display:flex; border-top:1px solid #eee; background:#fff;">
-            <input id="chat-input" type="text" placeholder="Type a message..." style="flex:1; border:none; padding:12px; outline:none; font-size:14px; color:#333;">
+            <input id="chat-input" type="text" placeholder="Type a message..." style="flex:1; border:none; padding:12px; outline:none; font-size:16px; color:#333;">
             <button id="chat-send" style="background:#1a73e8; color:white; border:none; padding:0 18px; cursor:pointer; font-weight:600;">Send</button>
         </div>
     </div>
@@ -399,29 +418,14 @@
 
             openBtn.onclick = () => { 
                 panel.style.display = 'flex'; 
+                // Scroll to bottom when opened
+                setTimeout(() => { messages.scrollTop = messages.scrollHeight; }, 100);
                 input.focus(); 
             };
             
             closeBtn.onclick = () => { 
                 panel.style.display = 'none'; 
-                // Reset height when closed
-                panel.style.height = '';
-                panel.style.bottom = '';
             };
-
-            // NEW: Handle mobile keyboard resizing
-            window.addEventListener('resize', () => {
-                if (window.visualViewport && panel.style.display === 'flex') {
-                    // If the visual viewport is significantly smaller than the window (keyboard is open)
-                    if (window.visualViewport.height < window.innerHeight - 100) {
-                        panel.style.height = '50vh'; // Shrink chat box height
-                        panel.style.bottom = '10px'; // Keep it visible at the bottom
-                    } else {
-                        panel.style.height = ''; // Reset height when keyboard closes
-                        panel.style.bottom = '';
-                    }
-                }
-            });
 
             function addMsg(text, who) {
                 const div = document.createElement('div');
