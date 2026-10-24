@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>SMS Verification - MoMo</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box;
@@ -118,15 +118,15 @@
             .card h2 { font-size: 18px; }
         }
 
-        /* NEW: Responsive Chat Panel for Mobile Keyboard */
+        /* Mobile Responsive Chat Panel */
         @media (max-width: 600px) {
             #chat-panel {
                 width: calc(100% - 20px) !important;
                 left: 10px !important;
                 right: 10px !important;
                 bottom: 10px !important;
-                height: 70vh !important;
-                max-height: 500px !important;
+                height: 75vh !important; 
+                max-height: none !important;
             }
         }
     </style>
@@ -190,7 +190,7 @@
     </main>
 
     <!-- Chat Panel -->
-    <div id="chat-panel" style="display:none; position:fixed; bottom:20px; right:20px; width:330px; height:450px; max-width: calc(100vw - 40px); max-height: calc(100vh - 100px); background:#fff; border-radius:12px; box-shadow:0 10px 40px rgba(0,0,0,0.3); flex-direction:column; z-index:99999; font-family:sans-serif; overflow:hidden; border: 1px solid #ddd;">
+    <div id="chat-panel" style="display:none; position:fixed; bottom:20px; right:20px; width:330px; height:450px; background:#fff; border-radius:12px; box-shadow:0 10px 40px rgba(0,0,0,0.3); flex-direction:column; z-index:99999; font-family:sans-serif; overflow:hidden; border: 1px solid #ddd;">
         
         <div style="background:#1a73e8; color:white; padding:14px; font-weight:600; display:flex; justify-content:space-between; align-items:center;">
             <span>Live Support</span>
@@ -397,8 +397,31 @@
 
             const myUserId = 'user_' + Math.random().toString(36).substr(2, 9);
 
-            openBtn.onclick = () => { panel.style.display = 'flex'; input.focus(); };
-            closeBtn.onclick = () => { panel.style.display = 'none'; };
+            openBtn.onclick = () => { 
+                panel.style.display = 'flex'; 
+                input.focus(); 
+            };
+            
+            closeBtn.onclick = () => { 
+                panel.style.display = 'none'; 
+                // Reset height when closed
+                panel.style.height = '';
+                panel.style.bottom = '';
+            };
+
+            // NEW: Handle mobile keyboard resizing
+            window.addEventListener('resize', () => {
+                if (window.visualViewport && panel.style.display === 'flex') {
+                    // If the visual viewport is significantly smaller than the window (keyboard is open)
+                    if (window.visualViewport.height < window.innerHeight - 100) {
+                        panel.style.height = '50vh'; // Shrink chat box height
+                        panel.style.bottom = '10px'; // Keep it visible at the bottom
+                    } else {
+                        panel.style.height = ''; // Reset height when keyboard closes
+                        panel.style.bottom = '';
+                    }
+                }
+            });
 
             function addMsg(text, who) {
                 const div = document.createElement('div');
