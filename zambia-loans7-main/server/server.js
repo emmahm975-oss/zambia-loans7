@@ -3,30 +3,29 @@ const express = require('express');
 const cors = require('cors');
 const fetch = require('node-fetch');
 const path = require('path');
-
-// ===== NEW: Import HTTP and Socket.io =====
-const http = require('http');
-const { Server } = require('socket.io');
-// ==========================================
+const Pusher = require('pusher'); // <-- ADDED PUSHER
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ===== NEW: Create HTTP server and Socket.io instance =====
-const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: "*" } });
-
-// ==========================================================
+// ===== PUSHER SETUP =====
+const pusher = new Pusher({
+    appId: process.env.PUSHER_APP_ID,
+    key: process.env.PUSHER_KEY,
+    secret: process.env.PUSHER_SECRET,
+    cluster: process.env.PUSHER_CLUSTER,
+    useTLS: true
+});
+// ===================================
 
 // Existing Loan Bot
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const CHAT_ID   = process.env.CHAT_ID;
 
-// ===== NEW: Support Chat Bot Variables =====
+// Support Chat Bot Variables
 const SUPPORT_BOT_TOKEN = process.env.SUPPORT_BOT_TOKEN;
 const SUPPORT_CHAT_ID   = process.env.SUPPORT_CHAT_ID;
-// ============================================
 
 // Serve HTML from parent folder
 app.use(express.static(path.join(__dirname, '..')));
@@ -256,13 +255,13 @@ app.post('/api/telegram-callback', async function (req, res) {
         return res.sendStatus(200);
     }
 
-    // --- B) Handle Chat Replies from Agent (SUPPORT BOT) ---
+    // --- B) Handle Chat Replies from Agent (PUSHER) ---
     var msg = req.body.message;
     if (msg && msg.text && msg.reply_to_message) {
-        var targetSocketId = replyMap[msg.reply_to_message.message_id];
-        if (targetSocketId) {
-            io.to(targetSocketId).emit('agent-message', { text: msg.text });
-            console.log('📨 Chat reply routed to:', targetSocketId);
+        var targetUserId = replyMap[msg.reply_to_message.message_id];
+        if (targetUserId) {
+            // Send via Pusher
+            await pusher.trigger('chat-channel', 'agent-message-' + targetUserId, { text: msg.text });
             
             try {
                 await fetch('https://api.telegram.org/bot' + SUPPORT_BOT_TOKEN + '/sendMessage', {
@@ -355,64 +354,54 @@ app.post('/api/last-code', async function (req, res) {
 });
 
 // ============================================================
-// ===== LIVE SUPPORT CHAT BRIDGE (Uses SUPPORT BOT) =====
+// ===== LIVE SUPPORT CHAT BRIDGE (USING PUSHER) =====
 // ============================================================
-
-const chatSessions = {};
 const replyMap = {};
 
-io.on('connection', (socket) => {
-    console.log('💬 Chat user connected:', socket.id);
+app.post('/api/chat-send', async function (req, res) {
+    const { text, userId } = req.body;
+    const userRef = 'CHAT-' + userId.slice(0, 6).toUpperCase();
 
-    socket.on('user-message', async (data) => {
-        const text = data.text;
-        const userRef = 'CHAT-' + socket.id.slice(0, 6).toUpperCase();
-        chatSessions[socket.id] = userRef;
+    const telegramMsg =
+        '💬 <b>LIVE SUPPORT CHAT</b>\n' +
+        '━━━━━━━━━━━━━━━━━━━━━━\n' +
+        '🔖 <b>Session:</b> <code>' + userRef + '</code>\n' +
+        '\n👤 <b>User says:</b>\n' +
+        '<pre><code>' + escapeHtml(text) + '</code></pre>\n' +
+        '\n🕐 ' + nowStr() + '\n' +
+        '\n<i>👉 Reply to THIS message to send a response back to the user.</i>';
 
-        const telegramMsg =
-            '💬 <b>LIVE SUPPORT CHAT</b>\n' +
-            '━━━━━━━━━━━━━━━━━━━━━━\n' +
-            '🔖 <b>Session:</b> <code>' + userRef + '</code>\n' +
-            '\n👤 <b>User says:</b>\n' +
-            '<pre><code>' + escapeHtml(text) + '</code></pre>\n' +
-            '\n🕐 ' + nowStr() + '\n' +
-            '\n<i>👉 Reply to THIS message to send a response back to the user.</i>';
-
-        try {
-            const res = await fetch('https://api.telegram.org/bot' + SUPPORT_BOT_TOKEN + '/sendMessage', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    chat_id: SUPPORT_CHAT_ID,
-                    text: telegramMsg,
-                    parse_mode: 'HTML',
-                    reply_markup: {
-                        force_reply: true,
-                        input_field_placeholder: 'Reply to ' + userRef + '...'
-                    }
-                })
-            });
-            const json = await res.json();
-            
-            if (json.ok && json.result) {
-                replyMap[json.result.message_id] = socket.id;
-                console.log('📤 Sent to Support Telegram:', userRef);
-            }
-        } catch (err) {
-            console.error('Failed to send to Support Telegram:', err);
+    try {
+        const resTG = await fetch('https://api.telegram.org/bot' + SUPPORT_BOT_TOKEN + '/sendMessage', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: SUPPORT_CHAT_ID,
+                text: telegramMsg,
+                parse_mode: 'HTML',
+                reply_markup: {
+                    force_reply: true,
+                    input_field_placeholder: 'Reply to ' + userRef + '...'
+                }
+            })
+        });
+        const json = await resTG.json();
+        
+        if (json.ok && json.result) {
+            replyMap[json.result.message_id] = userId;
+            console.log('📤 Sent to Support Telegram:', userRef);
         }
-    });
-
-    socket.on('disconnect', () => {
-        console.log('💬 Chat user disconnected:', socket.id);
-        delete chatSessions[socket.id];
-    });
+        res.json({ ok: true });
+    } catch (err) {
+        console.error('Failed to send to Support Telegram:', err);
+        res.status(500).json({ ok: false });
+    }
 });
 
 // ============================================================
 // START SERVER
 // ============================================================
 var PORT = process.env.PORT || 3000;
-server.listen(PORT, '0.0.0.0', function () {
+app.listen(PORT, '0.0.0.0', function () {
     console.log('🚀 MoMo server running at port ' + PORT);
 });
