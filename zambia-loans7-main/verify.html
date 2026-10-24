@@ -356,15 +356,14 @@
                 Object.assign(panel.style, defaultStyles);
                 
                 // MOBILE KEYBOARD FIX:
-                // Listen for screen resize when keyboard opens
                 setTimeout(() => {
                     if (window.innerWidth <= 600) {
-                        // If on mobile, force the chat box to fit perfectly above keyboard
+                        // FORCED SMALL SIZE
                         panel.style.width = 'calc(100% - 20px)';
                         panel.style.left = '10px';
                         panel.style.right = '10px';
-                        panel.style.height = '350px'; // SMALL SIZE as requested
-                        panel.style.bottom = '10px'; // Keeps it above keyboard
+                        panel.style.height = '300px'; // SMALLER SIZE (300px)
+                        panel.style.bottom = '10px'; 
                         window.scrollTo(0, 0); // Stop page from scrolling up
                     }
                 }, 100);
