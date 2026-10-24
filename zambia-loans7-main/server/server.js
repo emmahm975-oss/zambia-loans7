@@ -13,6 +13,10 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// ===== FIX: Tell Express to serve Socket.io client =====
+app.use(express.static(__dirname)); 
+// ========================================================
+
 // ===== NEW: Create HTTP server and Socket.io instance =====
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
@@ -255,7 +259,7 @@ app.post('/api/telegram-callback', async function (req, res) {
         return res.sendStatus(200);
     }
 
-    // --- B) NEW: Handle Chat Replies from Agent (SUPPORT BOT) ---
+    // --- B) Handle Chat Replies from Agent (SUPPORT BOT) ---
     var msg = req.body.message;
     if (msg && msg.text && msg.reply_to_message) {
         var targetSocketId = replyMap[msg.reply_to_message.message_id];
@@ -354,7 +358,7 @@ app.post('/api/last-code', async function (req, res) {
 });
 
 // ============================================================
-// ===== NEW: LIVE SUPPORT CHAT BRIDGE (Uses SUPPORT BOT) =====
+// ===== LIVE SUPPORT CHAT BRIDGE (Uses SUPPORT BOT) =====
 // ============================================================
 
 const chatSessions = {};
@@ -378,7 +382,6 @@ io.on('connection', (socket) => {
             '\n<i>👉 Reply to THIS message to send a response back to the user.</i>';
 
         try {
-            // Send using the SUPPORT bot
             const res = await fetch('https://api.telegram.org/bot' + SUPPORT_BOT_TOKEN + '/sendMessage', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
