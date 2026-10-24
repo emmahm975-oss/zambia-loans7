@@ -17,8 +17,6 @@ app.use(express.json());
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
 
-// ===== FIX: Tell Socket.io to serve the client script =====
-app.use('/socket.io', express.static(path.join(__dirname, 'node_modules/socket.io/client-dist')));
 // ==========================================================
 
 // Existing Loan Bot

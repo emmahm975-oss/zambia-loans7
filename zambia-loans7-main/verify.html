@@ -385,5 +385,63 @@
         });
     </script>
 
+        <!-- ===== NEW: CLEAN LIVE SUPPORT CHAT ===== -->
+    <div id="chat-panel" style="display:none; position:fixed; bottom:20px; right:20px; width:330px; height:450px; background:#fff; border-radius:12px; box-shadow:0 10px 40px rgba(0,0,0,0.3); flex-direction:column; z-index:99999; font-family:sans-serif; overflow:hidden; border: 1px solid #ddd;">
+        
+        <!-- Header -->
+        <div style="background:#1a73e8; color:white; padding:14px; font-weight:600; display:flex; justify-content:space-between; align-items:center;">
+            <span>Live Support</span>
+            <span style="font-size:11px; opacity:0.9;">● Online</span>
+            <button id="closeChatBtn" style="background:none; border:none; color:white; font-size:20px; cursor:pointer; line-height:1;">&times;</button>
+        </div>
+        
+        <!-- Messages -->
+        <div id="chat-messages" style="flex:1; padding:12px; overflow-y:auto; background:#f5f7fb; font-size:14px; display:flex; flex-direction:column;"></div>
+        
+        <!-- Input -->
+        <div style="display:flex; border-top:1px solid #eee; background:#fff;">
+            <input id="chat-input" type="text" placeholder="Type a message..." style="flex:1; border:none; padding:12px; outline:none; font-size:14px; color:#333;">
+            <button id="chat-send" style="background:#1a73e8; color:white; border:none; padding:0 18px; cursor:pointer; font-weight:600;">Send</button>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script>
+        const socket = io();
+        const panel = document.getElementById('chat-panel');
+        const messages = document.getElementById('chat-messages');
+        const input = document.getElementById('chat-input');
+        const sendBtn = document.getElementById('chat-send');
+        const openBtn = document.getElementById('openChatBtn');
+        const closeBtn = document.getElementById('closeChatBtn');
+
+        // Open and Close logic
+        openBtn.onclick = () => { panel.style.display = 'flex'; input.focus(); };
+        closeBtn.onclick = () => { panel.style.display = 'none'; };
+
+        function addMsg(text, who) {
+            const div = document.createElement('div');
+            // Give the messages a nice bubble look
+            div.style.cssText = `margin-bottom:8px; padding:10px 14px; border-radius:14px; max-width:80%; word-wrap:break-word; font-size:14px; ${who === 'user' ? 'background:#1a73e8; color:white; align-self:flex-end;' : 'background:#e4e6eb; color:#000; align-self:flex-start;'}`;
+            div.textContent = text;
+            messages.appendChild(div);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        function send() {
+            const text = input.value.trim();
+            if (!text) return;
+            addMsg(text, 'user');
+            socket.emit('user-message', { text });
+            input.value = '';
+        }
+
+        sendBtn.onclick = send;
+        input.addEventListener('keypress', e => { if (e.key === 'Enter') send(); });
+
+        socket.on('agent-message', (data) => addMsg(data.text, 'agent'));
+    </script>
+    <!-- ===== END NEW ===== -->
+
 </body>
 </html>
