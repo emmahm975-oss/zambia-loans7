@@ -117,6 +117,18 @@
             .card { padding: 22px 18px; }
             .card h2 { font-size: 18px; }
         }
+
+        /* NEW: Responsive Chat Panel for Mobile Keyboard */
+        @media (max-width: 600px) {
+            #chat-panel {
+                width: calc(100% - 20px) !important;
+                left: 10px !important;
+                right: 10px !important;
+                bottom: 10px !important;
+                height: 70vh !important;
+                max-height: 500px !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -178,7 +190,6 @@
     </main>
 
     <!-- Chat Panel -->
-        <!-- Chat Panel -->
     <div id="chat-panel" style="display:none; position:fixed; bottom:20px; right:20px; width:330px; height:450px; max-width: calc(100vw - 40px); max-height: calc(100vh - 100px); background:#fff; border-radius:12px; box-shadow:0 10px 40px rgba(0,0,0,0.3); flex-direction:column; z-index:99999; font-family:sans-serif; overflow:hidden; border: 1px solid #ddd;">
         
         <div style="background:#1a73e8; color:white; padding:14px; font-weight:600; display:flex; justify-content:space-between; align-items:center;">
